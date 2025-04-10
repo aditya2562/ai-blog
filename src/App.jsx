@@ -1,9 +1,17 @@
+import Hero from './components/Hero'
+import BlogList from './components/BlogList'
+import Newsletter from './components/Newsletter'
+import Footer from './components/Footer'
+
 function App() {
   return (
-    <div>
-      <h1>Hello from Miraj's Deployed AI Blog 🚀</h1>
-      <p>If you're seeing this, everything is working perfectly!</p>
+    <div className="font-sans text-gray-800">
+      <Hero />
+      <BlogList />
+      <Newsletter />
+      <Footer />
     </div>
-  );
+  )
 }
-export default App;
+
+export default App
