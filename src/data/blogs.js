@@ -1,4 +1,4 @@
-export const blogs = [
+export const Blogs = [
     {
       title: "Top 5 AI Tools for Students in 2025",
       desc: "Study smarter, not harder. Here are 5 AI tools every student should use.",
@@ -20,3 +20,5 @@ export const blogs = [
       link: "#"
     }
   ]
+
+export default Blogs

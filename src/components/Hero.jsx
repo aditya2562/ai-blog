@@ -1,6 +1,6 @@
 const Hero = () => {
     return (
-      <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-20 px-6 text-center">
+      <section className="bg-gradient-to-r from-green-600 to-indigo-700 text-white py-20 px-6 text-center">        
         <h1 className="text-4xl md:text-5xl font-bold mb-4">
           AI Tools
         </h1>
