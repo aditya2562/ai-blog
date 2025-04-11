@@ -20,8 +20,8 @@ const Hero = () => {
         >
         AI Tools
         <p className="text-base md:text-lg max-w-xl mx-auto text-zinc-400 font-light tracking-wider leading-loose italic">
-  Unlock the future of productivity with beautifully crafted AI tools—designed to simplify, accelerate, and elevate your work.
-</p>
+          Unlock the future of productivity with beautifully crafted AI tools—designed to simplify, accelerate, and elevate your work.
+        </p>
         </Motion.h1>
         </LampContainer>
       {/* // </section> */}
