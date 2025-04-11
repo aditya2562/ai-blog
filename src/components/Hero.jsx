@@ -1,12 +1,11 @@
 "use client";
 import React from "react";
-import { motion as Motion} from "motion/react";
+import { motion as Motion } from "motion/react";
 import { LampContainer } from "./ui/lamp";
  
 const Hero = () => {
     return (
       <>
-      {/* // <section className="bg-gradient-to-r from-green-600 to-indigo-700 text-white py-20 px-6 text-center">         */}
        <LampContainer>
         <Motion.h1
           initial={{ opacity: 0.5, y: 0 }}
@@ -24,7 +23,7 @@ const Hero = () => {
         </p>
         </Motion.h1>
         </LampContainer>
-      {/* // </section> */}
+        <hr></hr>
       </>
     )
   }
