@@ -1,14 +1,10 @@
-# render.yaml
 services:
   - type: web
     name: ai-blog-backend
     env: python
+    buildCommand: ""
+    startCommand: "python app.py"
     plan: free
-    buildCommand: "pip install -r backend/requirements.txt"
-    startCommand: "python backend/app.py"
     envVars:
-      - key: CO_API_KEY
-        sync: false
-    repo: https://github.com/aditya2562/ai-blog
-    branch: main
-    rootDir: backend
+      - key: PORT
+        value: 10000

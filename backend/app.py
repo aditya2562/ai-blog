@@ -11,7 +11,7 @@ cohere_client = cohere.Client(os.getenv("COHERE_API_KEY"))
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/generate-blog', methods=['POST'])
+@app.route('/generate_blog', methods=['POST'])  # ✅ route name updated
 def generate_blog():
     data = request.json
     topic = data.get("topic", "AI tools for students and freelancers")
@@ -30,8 +30,7 @@ def generate_blog():
     except Exception as e:
         print("🔥 Cohere Error:", str(e))
         return jsonify({"error": str(e)}), 500
-    
+
 if __name__ == '__main__':
-    import os
-    port = int(os.environ.get("PORT", 5000))  
+    port = int(os.environ.get("PORT", 10000))  # ✅ Use port 10000 for Render
     app.run(host='0.0.0.0', port=port)
