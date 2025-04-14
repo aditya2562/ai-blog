@@ -19,6 +19,7 @@ const AIBlogGenerator = () => {
       })
 
       setPost(response.data.post)
+      console.log("🎯 AI response:", response.data.post)
 
       // 🎉 Confetti effect
       confetti({
@@ -86,13 +87,7 @@ const AIBlogGenerator = () => {
           <h3 className="text-xl font-bold mb-3 font-[Space Grotesk] text-indigo-900">
             📝 Generated Blog Post:
           </h3>
-          <Typing
-            text={post}
-            speed={30}
-            eraseDelay={999999999}
-            typingDelay={100}
-            cursor="|"
-          />
+          <p className="text-black">{post}</p>
         </Motion.div>
       )}
     </Motion.div>
