@@ -14,7 +14,7 @@ const AIBlogGenerator = () => {
     setLoading(true)
     setPost('')
     try {
-      const response = await axios.post('http://127.0.0.1:5000/generate-blog', {
+      const response = await axios.post('https://ai-blog-backend-27mp.onrender.com/generate_blog', {
         topic: topic
       })
 
