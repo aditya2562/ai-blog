@@ -7,12 +7,14 @@ const AIBlogGenerator = () => {
   const [topic, setTopic] = useState('')
   const [loading, setLoading] = useState(false)
   const [generatedContent, setGeneratedContent] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
 
   const generateBlog = async () => {
     if (!topic.trim()) return
 
     setLoading(true)
     setGeneratedContent('')
+    setErrorMessage('')
 
     const user = auth.currentUser
     if (!user) {
@@ -22,10 +24,10 @@ const AIBlogGenerator = () => {
     }
 
     try {
-      const response = await fetch('https://ai-blog-backend-27mp.onrender.com', {
+      const response = await fetch('https://ai-blog-backend-27mp.onrender.com/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, user_email: user.email }), // ✅ FIXED KEY
+        body: JSON.stringify({ topic, user_email: user.email }),
       })
 
       const data = await response.json()
@@ -33,19 +35,18 @@ const AIBlogGenerator = () => {
       if (response.ok) {
         setGeneratedContent(data.blog)
       } else {
-        console.error('API Error:', data.error)
-        alert('Failed to generate blog: ' + data.error)
+        setErrorMessage(data.error || 'Something went wrong.')
       }
     } catch (err) {
       console.error('❌ Error generating blog:', err)
-      alert('Something went wrong while generating the blog.')
+      setErrorMessage('Server is currently unavailable. Please try again later.')
     }
 
     setLoading(false)
   }
 
   return (
-    <section className="relative py-20 px-6 bg-black text-white overflow-hidden">
+    <section className="relative py-20 px-6 bg-black text-white overflow-hidden min-h-screen">
       <div className="relative z-10 max-w-3xl mx-auto text-center">
         <Motion.h2
           className="text-3xl md:text-4xl font-bold mb-6"
@@ -56,10 +57,14 @@ const AIBlogGenerator = () => {
           AI Blog Generator
         </Motion.h2>
 
+        <p className="mb-6 text-zinc-400">
+          Generate high-quality blog posts on any topic related to AI tools, freelancing, productivity, and more.
+        </p>
+
         <input
           className="w-full p-3 rounded-md border border-zinc-600 bg-zinc-900 text-white mb-4"
           type="text"
-          placeholder="Enter a topic..."
+          placeholder="e.g., Make Money with AI: 3 Passive Income Ideas"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
         />
@@ -70,6 +75,16 @@ const AIBlogGenerator = () => {
         >
           ✨ {loading ? 'Generating...' : 'Generate Blog Post'}
         </button>
+
+        {errorMessage && (
+          <Motion.p
+            className="mt-4 text-red-400 font-medium"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            {errorMessage}
+          </Motion.p>
+        )}
 
         {generatedContent && (
           <Motion.div
