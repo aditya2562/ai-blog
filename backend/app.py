@@ -43,7 +43,5 @@ def get_user_blog_history(user_id):
     return jsonify(user_blogs)
 
 
-# ✅ This part was missing!
-if __name__ == '__main__':
-    print("✅ Flask server is starting...")
-    app.run(debug=True, port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)  
