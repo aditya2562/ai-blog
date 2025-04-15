@@ -3,7 +3,7 @@ from flask_cors import CORS
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app, origins="https://adityas-ai-blog.netlify.app", supports_credentials=True)
+CORS(app, origins=["https://adityas-ai-blog.netlify.app"])
 
 blog_history = []
 
