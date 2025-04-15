@@ -12,7 +12,7 @@ import BlogDetail from './components/BlogDetail'
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-black text-white font-sans">
+      <div className="min-h-screen bg-black text-black font-sans">
         <Navbar />
         <Routes>
           {/* ✅ Show full homepage at "/" */}
