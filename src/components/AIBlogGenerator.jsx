@@ -26,9 +26,9 @@ const AIBlogGenerator = () => {
     try {
       const response = await fetch('https://ai-blog-backend-27mp.onrender.com/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, user_email: user.email }),
-      })
+        headers: { "Content-Type": 'application/json' },
+        body: JSON.stringify({ prompt: topic, user_email: user.email })
+    })
 
       const data = await response.json()
 
