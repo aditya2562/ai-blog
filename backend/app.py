@@ -1,11 +1,10 @@
-# In app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import cohere
 
 app = Flask(__name__)
 
-# Update CORS to handle both www and non-www versions
+# Allow Netlify frontend
 CORS(app, origins=["https://adityas-ai-blog.netlify.app", 
                    "http://adityas-ai-blog.netlify.app"], 
      supports_credentials=True)
@@ -26,14 +25,15 @@ def generate_blog():
         if not prompt:
             return jsonify({"error": "Prompt is missing"}), 400
         
-        response = co.generate(
-            model='command-xlarge-nightly',
-            prompt=prompt,
-            max_tokens=300,
+        # Use chat API instead of generate API
+        response = co.chat(
+            message=f"Write a blog post about: {prompt}",
+            model="command",  # Using a supported model for chat
             temperature=0.8
         )
         
-        blog_text = response.generations[0].text
+        # Extract text from chat response
+        blog_text = response.text
         return jsonify({"blog": blog_text.strip()}), 200
         
     except Exception as e:
