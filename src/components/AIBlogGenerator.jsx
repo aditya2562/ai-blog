@@ -22,7 +22,7 @@ const AIBlogGenerator = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/generate_blog', {
+      const response = await fetch('https://ai-blog-backend-27mp.onrender.com', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, user_email: user.email }), // ✅ FIXED KEY
