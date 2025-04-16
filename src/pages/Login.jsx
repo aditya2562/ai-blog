@@ -1,48 +1,57 @@
-import React, { useState } from "react";
-import { auth } from "../firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
+import { useState } from 'react'
+import { auth } from '../firebase'
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { useNavigate } from 'react-router-dom'
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const navigate = useNavigate()
 
   const handleLogin = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      alert("Login successful!");
-      navigate("/");
-    } catch (error) {
-      alert(error.message);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+
+      // ✅ Save user info to localStorage
+      localStorage.setItem('firebaseUser', JSON.stringify(user))
+
+      navigate('/')
+    } catch (err) {
+      alert('Login failed: ' + err.message)
     }
-  };
+  }
 
   return (
-    <div className="p-4 flex flex-col items-center">
-      <h2 className="text-2xl font-bold mb-4">Login</h2>
-      <form onSubmit={handleLogin} className="space-y-3 w-80">
+    <div className="min-h-screen flex items-center justify-center bg-black text-white px-6">
+      <form onSubmit={handleLogin} className="w-full max-w-md bg-zinc-800 p-6 rounded-lg shadow-md">
+        <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
         <input
-          className="w-full p-2 border rounded"
           type="email"
           placeholder="Email"
+          className="w-full mb-4 p-3 rounded-md bg-zinc-900 border border-zinc-600"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required
         />
         <input
-          className="w-full p-2 border rounded"
           type="password"
           placeholder="Password"
+          className="w-full mb-4 p-3 rounded-md bg-zinc-900 border border-zinc-600"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          required
         />
-        <button className="w-full bg-green-500 text-white p-2 rounded" type="submit">
+        <button
+          type="submit"
+          className="w-full py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-md font-semibold"
+        >
           Login
         </button>
       </form>
     </div>
-  );
-};
+  )
+}
 
-export default Login;
+export default Login
