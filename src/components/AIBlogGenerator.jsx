@@ -11,6 +11,7 @@ import {
 
 const AIBlogGenerator = () => {
   const [topic, setTopic] = useState('')
+  const [tone, setTone] = useState('Formal')
   const [loading, setLoading] = useState(false)
   const [generatedContent, setGeneratedContent] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
@@ -39,7 +40,7 @@ const AIBlogGenerator = () => {
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: topic, user_email: user.email })
+        body: JSON.stringify({ prompt: topic, user_email: user.email, tone })
       })
 
       if (!response.ok) {
@@ -54,7 +55,6 @@ const AIBlogGenerator = () => {
 
       setGeneratedContent(data.blog)
 
-      // Save metadata and blog to Firestore
       await setDoc(
         doc(db, 'users', user.uid),
         { email: user.email, lastActive: serverTimestamp() },
@@ -66,6 +66,7 @@ const AIBlogGenerator = () => {
         description: blogDescription,
         content: data.blog,
         topic,
+        tone,
         createdAt: serverTimestamp()
       })
 
@@ -132,6 +133,18 @@ const AIBlogGenerator = () => {
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
         />
+
+        <select
+          className="w-full h-12 mb-4 rounded-md border border-zinc-600 bg-zinc-900 text-white px-2"
+          value={tone}
+          onChange={(e) => setTone(e.target.value)}
+        >
+          <option>Formal</option>
+          <option>Casual</option>
+          <option>Funny</option>
+          <option>Poetic</option>
+          <option>Persuasive</option>
+        </select>
 
         <button
           className="px-6 py-3 rounded-md bg-pink-600 hover:bg-pink-700 text-white mr-4"

@@ -6,7 +6,6 @@ import cohere
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
-# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
@@ -16,12 +15,12 @@ CORS(app, origins=[
     "http://127.0.0.1:5173"
 ], supports_credentials=True)
 
-# API keys from environment
+# Environment variables
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@example.com")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "adityakacha324@gmail.com")
 
-# Validation
+# Validations
 if not COHERE_API_KEY:
     raise ValueError("Missing COHERE_API_KEY in .env file.")
 if not SENDGRID_API_KEY:
@@ -29,11 +28,11 @@ if not SENDGRID_API_KEY:
 if not FROM_EMAIL:
     raise ValueError("Missing FROM_EMAIL in .env file.")
 
-# Init Cohere client
+# Initialize Cohere client
 co = cohere.Client(COHERE_API_KEY)
 
 # ------------------------------------------------
-# 🔹 Route: Generate Blog (no email sent here)
+# 🔹 Route: Generate Blog with Tone Support
 # ------------------------------------------------
 @app.route("/generate", methods=["POST", "OPTIONS"])
 def generate_blog():
@@ -43,12 +42,16 @@ def generate_blog():
     try:
         data = request.get_json()
         prompt = data.get("prompt", "").strip()
+        tone = data.get("tone", "neutral").strip().lower()  # NEW 🎯
 
         if not prompt:
             return jsonify({"error": "Prompt is required"}), 400
 
+        # Append tone to prompt
+        full_prompt = f"Write a {tone} blog post about: {prompt}"
+
         response = co.chat(
-            message=f"Write a blog post about: {prompt}",
+            message=full_prompt,
             model="command",
             temperature=0.8
         )
@@ -67,8 +70,9 @@ def generate_blog():
         print(f"🔥 Blog Generation Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+
 # ------------------------------------------------
-# 🔹 Route: Send Email (user clicks "Send to Email")
+# 🔹 Route: Send Email (user manually clicks button)
 # ------------------------------------------------
 @app.route("/send_email", methods=["POST", "OPTIONS"])
 def send_email():
@@ -100,6 +104,6 @@ def send_email():
         print(f"🔥 SendGrid Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# ------------------------------------------------
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
