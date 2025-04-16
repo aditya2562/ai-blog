@@ -1,69 +1,81 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { auth, db } from '../firebase'
-import { collection, query, orderBy, getDocs } from 'firebase/firestore'
-import { useNavigate } from 'react-router-dom'
-import { motion as Motion } from 'framer-motion'
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 
 const BlogHistory = () => {
   const [blogs, setBlogs] = useState([])
-  const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
+
+  const fetchBlogs = async () => {
+    const user = auth.currentUser
+    if (!user) return
+
+    const snapshot = await getDocs(collection(db, 'users', user.uid, 'blogs'))
+    const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    setBlogs(fetched)
+  }
 
   useEffect(() => {
-    const fetchBlogs = async () => {
-      try {
-        const user = auth.currentUser
-        if (!user) return
-
-        const q = query(
-          collection(db, 'users', user.uid, 'blogs'),
-          orderBy('createdAt', 'desc')
-        )
-        const querySnapshot = await getDocs(q)
-        const userBlogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-        setBlogs(userBlogs)
-      } catch (error) {
-        console.error('Error fetching blog history:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchBlogs()
   }, [])
 
-  return (
-    <section className="px-6 py-12 bg-gradient-to-br from-zinc-900 to-black min-h-screen text-white">
-      <div className="max-w-5xl mx-auto">
-        <h2 className="text-4xl font-bold mb-8 text-center">📚 Your Blog History</h2>
+  const deleteBlog = async (id) => {
+    const user = auth.currentUser
+    if (!user) return
 
-        {loading ? (
-          <p className="text-center">Loading...</p>
-        ) : blogs.length === 0 ? (
-          <p className="text-center text-zinc-400">No blogs found. Try generating one!</p>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2">
-            {blogs.map((blog, index) => (
-              <Motion.div
-                key={blog.id}
-                className="bg-zinc-800 p-6 rounded-xl shadow hover:shadow-lg border border-zinc-700 hover:border-pink-500 transition-all"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <h3 className="text-xl font-semibold mb-2">{blog.title}</h3>
-                <p className="text-sm text-zinc-400 mb-4">{blog.description}</p>
-                <button
-                  onClick={() => navigate(`/blog/${blog.id}`, { state: { blog } })}
-                  className="text-pink-500 hover:underline font-medium"
-                >
-                  Read More →
-                </button>
-              </Motion.div>
+    await deleteDoc(doc(db, 'users', user.uid, 'blogs', id))
+    setBlogs(blogs.filter(blog => blog.id !== id))
+  }
+
+  const clearAllBlogs = async () => {
+    const user = auth.currentUser
+    if (!user) return
+
+    const snapshot = await getDocs(collection(db, 'users', user.uid, 'blogs'))
+    const batchDeletes = snapshot.docs.map(d => deleteDoc(d.ref))
+
+    await Promise.all(batchDeletes)
+    setBlogs([])
+  }
+
+  return (
+    <section className="p-6 max-w-4xl mx-auto text-white">
+      <h2 className="text-3xl font-bold mb-6 text-center">Your Saved Blogs</h2>
+
+      {blogs.length === 0 ? (
+        <p className="text-center text-gray-400">No blogs yet.</p>
+      ) : (
+        <>
+          <div className="text-right mb-4">
+            <button
+              onClick={clearAllBlogs}
+              className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md text-white"
+            >
+              🗑️ Clear All
+            </button>
+          </div>
+
+          <div className="grid gap-6">
+            {blogs.map((blog) => (
+              <div key={blog.id} className="p-4 rounded-md bg-zinc-800 shadow-md">
+                <h3 className="text-xl font-semibold">{blog.title}</h3>
+                <p className="text-sm text-gray-400 mb-2">{blog.description}</p>
+
+                <div className="flex justify-between items-center mt-3">
+                  <a href={`/blog/${blog.id}`} className="text-blue-500 hover:underline">
+                    Read More →
+                  </a>
+                  <button
+                    onClick={() => deleteBlog(blog.id)}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </section>
   )
 }
