@@ -3,45 +3,103 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 import cohere
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
-load_dotenv()  # This loads .env variables
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins=["https://adityas-ai-blog.netlify.app", "http://localhost:5173", "http://localhost:3000"], supports_credentials=True)
+CORS(app, origins=[
+    "https://adityas-ai-blog.netlify.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+], supports_credentials=True)
 
-# Load Cohere API key from .env
+# API keys from environment
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@example.com")
 
+# Validation
 if not COHERE_API_KEY:
-    raise ValueError("Missing Cohere API key. Check your .env file.")
+    raise ValueError("Missing COHERE_API_KEY in .env file.")
+if not SENDGRID_API_KEY:
+    raise ValueError("Missing SENDGRID_API_KEY in .env file.")
+if not FROM_EMAIL:
+    raise ValueError("Missing FROM_EMAIL in .env file.")
 
+# Init Cohere client
 co = cohere.Client(COHERE_API_KEY)
 
+# ------------------------------------------------
+# 🔹 Route: Generate Blog (no email sent here)
+# ------------------------------------------------
 @app.route("/generate", methods=["POST", "OPTIONS"])
 def generate_blog():
     if request.method == "OPTIONS":
         return "", 204
-    
+
     try:
         data = request.get_json()
-        prompt = data.get("prompt", "")
-        user_email = data.get("user_email", "anonymous@user.com")
-        
+        prompt = data.get("prompt", "").strip()
+
         if not prompt:
-            return jsonify({"error": "Prompt is missing"}), 400
-        
+            return jsonify({"error": "Prompt is required"}), 400
+
         response = co.chat(
             message=f"Write a blog post about: {prompt}",
             model="command",
             temperature=0.8
         )
-        
+
         blog_text = response.text.strip()
-        return jsonify({"blog": blog_text}), 200
-    
+        blog_title = f"Blog on {prompt.title()}"
+        description = blog_text[:120] + "..."
+
+        return jsonify({
+            "blog": blog_text,
+            "title": blog_title,
+            "description": description
+        }), 200
+
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"🔥 Blog Generation Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+# ------------------------------------------------
+# 🔹 Route: Send Email (user clicks "Send to Email")
+# ------------------------------------------------
+@app.route("/send_email", methods=["POST", "OPTIONS"])
+def send_email():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        data = request.get_json()
+        to_email = data.get("email")
+        title = data.get("title")
+        content = data.get("content")
+
+        if not all([to_email, title, content]):
+            return jsonify({"error": "Missing email, title, or content"}), 400
+
+        message = Mail(
+            from_email=FROM_EMAIL,
+            to_emails=to_email,
+            subject=title,
+            html_content=f"<h2>{title}</h2><p>{content}</p>"
+        )
+
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        sg.send(message)
+
+        return jsonify({"message": "Email sent successfully!"}), 200
+
+    except Exception as e:
+        print(f"🔥 SendGrid Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# ------------------------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

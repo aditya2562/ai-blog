@@ -13,6 +13,7 @@ const AIBlogGenerator = () => {
   const [topic, setTopic] = useState('')
   const [loading, setLoading] = useState(false)
   const [generatedContent, setGeneratedContent] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
 
   const generateBlog = async () => {
     if (!topic.trim()) return
@@ -28,7 +29,6 @@ const AIBlogGenerator = () => {
     }
 
     try {
-      // ✅ Use correct backend URL depending on environment
       const isDevelopment =
         window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 
@@ -54,7 +54,7 @@ const AIBlogGenerator = () => {
 
       setGeneratedContent(data.blog)
 
-      // ✅ Save metadata & blog to Firestore
+      // Save metadata and blog to Firestore
       await setDoc(
         doc(db, 'users', user.uid),
         { email: user.email, lastActive: serverTimestamp() },
@@ -78,6 +78,46 @@ const AIBlogGenerator = () => {
     }
   }
 
+  const sendEmail = async () => {
+    const user = auth.currentUser
+    if (!user || !generatedContent) return
+
+    setSendingEmail(true)
+
+    try {
+      const isDevelopment =
+        window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+
+      const emailApiUrl = isDevelopment
+        ? '/send-email-proxy'
+        : 'https://ai-blog-backend-27mp.onrender.com/send_email'
+
+      const blogTitle = `Blog on ${topic}`
+
+      const res = await fetch(emailApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          title: blogTitle,
+          content: generatedContent
+        })
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to send email')
+      }
+
+      alert('✅ Blog sent to your email!')
+    } catch (err) {
+      console.error('❌ Email send error:', err)
+      alert('Error sending email. Please try again.')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+
   return (
     <section className="relative py-20 px-6 bg-black text-white overflow-hidden">
       <div className="relative z-10 max-w-3xl mx-auto text-center">
@@ -94,24 +134,34 @@ const AIBlogGenerator = () => {
         />
 
         <button
-          className="px-6 py-3 rounded-md bg-pink-600 hover:bg-pink-700 text-white"
+          className="px-6 py-3 rounded-md bg-pink-600 hover:bg-pink-700 text-white mr-4"
           onClick={generateBlog}
           disabled={loading}
         >
           {loading ? 'Generating...' : 'Generate Blog Post'}
         </button>
-      </div>
 
-      {generatedContent && (
-        <Motion.div
-          className="mt-10 p-6 rounded-lg bg-zinc-800 text-left max-h-[500px] overflow-y-auto shadow-lg"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h3 className="text-2xl font-semibold mb-4">{topic}</h3>
-          <div className="text-zinc-300 whitespace-pre-line">{generatedContent}</div>
-        </Motion.div>
-      )}
+        {generatedContent && (
+          <>
+            <button
+              className="mt-4 px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={sendEmail}
+              disabled={sendingEmail}
+            >
+              {sendingEmail ? 'Sending...' : '📩 Send to My Email'}
+            </button>
+
+            <Motion.div
+              className="mt-10 p-6 rounded-lg bg-zinc-800 text-left max-h-[500px] overflow-y-auto shadow-lg"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <h3 className="text-2xl font-semibold mb-4">{topic}</h3>
+              <div className="text-zinc-300 whitespace-pre-line">{generatedContent}</div>
+            </Motion.div>
+          </>
+        )}
+      </div>
     </section>
   )
 }
