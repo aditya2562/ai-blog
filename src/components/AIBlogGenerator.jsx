@@ -1,13 +1,7 @@
 import { useState } from 'react'
 import { motion as Motion } from 'framer-motion'
 import { auth, db } from '../firebase'
-import {
-  collection,
-  addDoc,
-  setDoc,
-  doc,
-  serverTimestamp
-} from 'firebase/firestore'
+import { collection, addDoc, setDoc, doc, serverTimestamp } from 'firebase/firestore'
 
 const AIBlogGenerator = () => {
   const [topic, setTopic] = useState('')
@@ -15,6 +9,7 @@ const AIBlogGenerator = () => {
   const [loading, setLoading] = useState(false)
   const [generatedContent, setGeneratedContent] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
 
   const generateBlog = async () => {
     if (!topic.trim()) return
@@ -30,12 +25,8 @@ const AIBlogGenerator = () => {
     }
 
     try {
-      const isDevelopment =
-        window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-
-      const apiUrl = isDevelopment
-        ? '/api-proxy'
-        : 'https://ai-blog-backend-27mp.onrender.com/generate'
+      const isDev = window.location.hostname === 'localhost'
+      const apiUrl = isDev ? '/api-proxy' : 'https://ai-blog-backend-27mp.onrender.com/generate'
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -43,13 +34,9 @@ const AIBlogGenerator = () => {
         body: JSON.stringify({ prompt: topic, user_email: user.email, tone })
       })
 
-      if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.error || 'Failed to generate blog')
-      }
+      if (!response.ok) throw new Error('Blog generation failed.')
 
       const data = await response.json()
-
       const blogTitle = `Blog on ${topic}`
       const blogDescription = data.blog.substring(0, 120) + '...'
 
@@ -73,7 +60,7 @@ const AIBlogGenerator = () => {
       console.log('✅ Blog saved to Firestore')
     } catch (err) {
       console.error('❌ Blog generation failed:', err)
-      alert('Something went wrong. Please try again.')
+      alert('Something went wrong.')
     } finally {
       setLoading(false)
     }
@@ -86,36 +73,59 @@ const AIBlogGenerator = () => {
     setSendingEmail(true)
 
     try {
-      const isDevelopment =
-        window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-
-      const emailApiUrl = isDevelopment
-        ? '/send-email-proxy'
-        : 'https://ai-blog-backend-27mp.onrender.com/send_email'
-
-      const blogTitle = `Blog on ${topic}`
+      const isDev = window.location.hostname === 'localhost'
+      const emailApiUrl = isDev ? '/send-email-proxy' : 'https://ai-blog-backend-27mp.onrender.com/send_email'
 
       const res = await fetch(emailApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: user.email,
-          title: blogTitle,
+          title: `Blog on ${topic}`,
           content: generatedContent
         })
       })
 
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to send email')
-      }
+      if (!res.ok) throw new Error('Email failed.')
 
       alert('✅ Blog sent to your email!')
     } catch (err) {
       console.error('❌ Email send error:', err)
-      alert('Error sending email. Please try again.')
+      alert('Failed to send email.')
     } finally {
       setSendingEmail(false)
+    }
+  }
+
+  const handleCheckout = async () => {
+    setCheckoutLoading(true)
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        alert('Login to proceed to checkout.')
+        return
+      }
+
+      const isDev = window.location.hostname === 'localhost'
+      const checkoutUrl = isDev ? '/checkout-proxy' : 'https://ai-blog-backend-27mp.onrender.com/create-checkout-session'
+
+      const res = await fetch(checkoutUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email })
+      })
+
+      const data = await res.json()
+      if (data?.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error(data.error || 'Checkout failed')
+      }
+    } catch (err) {
+      console.error('❌ Stripe checkout error:', err)
+      alert('Failed to redirect to checkout.')
+    } finally {
+      setCheckoutLoading(false)
     }
   }
 
@@ -146,18 +156,28 @@ const AIBlogGenerator = () => {
           <option>Persuasive</option>
         </select>
 
-        <button
-          className="px-6 py-3 rounded-md bg-pink-600 hover:bg-pink-700 text-white mr-4"
-          onClick={generateBlog}
-          disabled={loading}
-        >
-          {loading ? 'Generating...' : 'Generate Blog Post'}
-        </button>
+        <div className="flex flex-wrap justify-center gap-4">
+          <button
+            className="px-6 py-3 rounded-md bg-pink-600 hover:bg-pink-700 text-white"
+            onClick={generateBlog}
+            disabled={loading}
+          >
+            {loading ? 'Generating...' : 'Generate Blog'}
+          </button>
+
+          <button
+            className="px-6 py-3 rounded-md bg-green-600 hover:bg-green-700 text-white"
+            onClick={handleCheckout}
+            disabled={checkoutLoading}
+          >
+            {checkoutLoading ? 'Processing...' : '💳 Buy with Stripe'}
+          </button>
+        </div>
 
         {generatedContent && (
           <>
             <button
-              className="mt-4 px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white"
+              className="mt-6 px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white"
               onClick={sendEmail}
               disabled={sendingEmail}
             >
