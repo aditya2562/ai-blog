@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { db } from '../firebase'
+import { db, auth } from '../firebase'
 import { doc, getDoc } from 'firebase/firestore'
-import { auth } from '../firebase'
+import { onAuthStateChanged } from 'firebase/auth'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -12,8 +12,7 @@ const BlogDetail = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchBlog = async () => {
-      const user = auth.currentUser
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         alert('Please log in to view the blog.')
         return
@@ -22,25 +21,23 @@ const BlogDetail = () => {
       try {
         const blogRef = doc(db, 'users', user.uid, 'blogs', id)
         const blogSnap = await getDoc(blogRef)
-
         if (blogSnap.exists()) {
           setBlog(blogSnap.data())
         } else {
-          console.log('No such blog!')
+          console.log('❌ No such blog!')
         }
       } catch (err) {
-        console.error('Error fetching blog:', err)
+        console.error('❌ Error fetching blog:', err)
       } finally {
         setLoading(false)
       }
-    }
+    })
 
-    fetchBlog()
+    return () => unsubscribe()
   }, [id])
 
   const downloadAsPDF = () => {
     const input = document.getElementById('blog-content')
-
     html2canvas(input).then((canvas) => {
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
@@ -53,7 +50,7 @@ const BlogDetail = () => {
     })
   }
 
-  if (loading) return <div className="text-center py-20">Loading...</div>
+  if (loading) return <div className="text-center py-20 text-white">Loading...</div>
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-16 text-white">
