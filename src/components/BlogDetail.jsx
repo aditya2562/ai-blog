@@ -5,7 +5,6 @@ import { doc, getDoc } from 'firebase/firestore'
 import { auth } from '../firebase'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
-import { Helmet } from 'react-helmet-async'
 
 const BlogDetail = () => {
   const { id } = useParams()
@@ -60,10 +59,10 @@ const BlogDetail = () => {
     <div className="max-w-3xl mx-auto px-6 py-16 text-white">
       {blog && (
         <>
-          <Helmet>
+          {/* <Helmet>
             <title>{blog.title} | AI Blog Generator</title>
             <meta name="description" content={blog.description || blog.content.slice(0, 150)} />
-          </Helmet>
+          </Helmet> */}
 
           <h1 className="text-3xl font-bold mb-4">{blog.title}</h1>
           <button
