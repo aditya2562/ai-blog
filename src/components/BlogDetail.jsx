@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { db, auth } from '../firebase'
+import { db } from '../firebase'
 import { doc, getDoc } from 'firebase/firestore'
-import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from '../firebase'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import { Helmet } from 'react-helmet-async'
 
 const BlogDetail = () => {
   const { id } = useParams()
@@ -12,7 +13,8 @@ const BlogDetail = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const fetchBlog = async () => {
+      const user = auth.currentUser
       if (!user) {
         alert('Please log in to view the blog.')
         return
@@ -21,23 +23,25 @@ const BlogDetail = () => {
       try {
         const blogRef = doc(db, 'users', user.uid, 'blogs', id)
         const blogSnap = await getDoc(blogRef)
+
         if (blogSnap.exists()) {
           setBlog(blogSnap.data())
         } else {
-          console.log('❌ No such blog!')
+          console.log('No such blog!')
         }
       } catch (err) {
-        console.error('❌ Error fetching blog:', err)
+        console.error('Error fetching blog:', err)
       } finally {
         setLoading(false)
       }
-    })
+    }
 
-    return () => unsubscribe()
+    fetchBlog()
   }, [id])
 
   const downloadAsPDF = () => {
     const input = document.getElementById('blog-content')
+
     html2canvas(input).then((canvas) => {
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
@@ -50,12 +54,17 @@ const BlogDetail = () => {
     })
   }
 
-  if (loading) return <div className="text-center py-20 text-white">Loading...</div>
+  if (loading) return <div className="text-center py-20">Loading...</div>
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-16 text-white">
-      {blog ? (
+      {blog && (
         <>
+          <Helmet>
+            <title>{blog.title} | AI Blog Generator</title>
+            <meta name="description" content={blog.description || blog.content.slice(0, 150)} />
+          </Helmet>
+
           <h1 className="text-3xl font-bold mb-4">{blog.title}</h1>
           <button
             onClick={downloadAsPDF}
@@ -67,8 +76,6 @@ const BlogDetail = () => {
             <p className="whitespace-pre-line">{blog.content}</p>
           </div>
         </>
-      ) : (
-        <div className="text-center">Blog not found.</div>
       )}
     </div>
   )
