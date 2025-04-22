@@ -127,13 +127,15 @@ def create_checkout_session():
         data = request.get_json()
         email = data.get("email", "anonymous@guest.com")
 
+        print("📧 Creating session for:", email)
+
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[{
                 "price": STRIPE_PRICE_ID,
                 "quantity": 1,
             }],
-            mode="payment",
+            mode="subscription",
             success_url="https://adityas-ai-blog.netlify.app/success",
             cancel_url="https://adityas-ai-blog.netlify.app/cancel",
             customer_email=email,
@@ -141,8 +143,9 @@ def create_checkout_session():
         )
 
         return jsonify({"url": session.url}), 200
+
     except Exception as e:
-        print("🔥 Stripe Error:", str(e))
+        print("🔥 Stripe Checkout Error:", str(e))
         return jsonify({"error": str(e)}), 500
 
 # 🧩 Stripe Webhook to Upgrade User Plan
@@ -161,12 +164,14 @@ def stripe_webhook():
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
-        customer_email = session.get("customer_email")
+        email = session.get("customer_email")
 
-        if customer_email:
-            user_ref = db.collection("users").document(customer_email)
-            user_ref.set({"plan": "premium"}, merge=True)
-            print(f"✅ Upgraded {customer_email} to premium")
+    if email:
+        db.collection("users").document(email).set({
+            "plan": "premium",
+            "subscribed": True,
+            "stripe_session_id": session["id"]
+        }, merge=True)
 
     return jsonify(success=True), 200
 

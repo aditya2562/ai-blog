@@ -29,25 +29,25 @@ const Pricing = () => {
     }
 
     try {
-      const res = await fetch(
-        'https://ai-blog-backend-27mp.onrender.com/create-checkout-session',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email: user.email }) // 👈 Send email to backend
-        }
-      )
+      const res = await fetch('https://ai-blog-backend-27mp.onrender.com/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: user.email })
+      })
 
       const data = await res.json()
-      if (data.url) {
+      console.log("🔁 Stripe checkout response:", data)
+
+      if (data?.url) {
         window.location.href = data.url
       } else {
+        console.error('❌ Unexpected Stripe response:', data)
         alert('Something went wrong while redirecting to payment.')
       }
     } catch (err) {
-      console.error('Error creating checkout session:', err)
+      console.error('❌ Error creating checkout session:', err)
       alert('Failed to start checkout session.')
     }
   }
