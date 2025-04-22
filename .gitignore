@@ -31,3 +31,4 @@ dist-ssr
 # Environment variables (important!)
 .env
 /backend/.env
+backend/firebase-admin-key.json
