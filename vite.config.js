@@ -23,6 +23,12 @@ export default defineConfig(({ mode }) => {
           target: backendBase,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/send-email-proxy/, '/send_email')
+        },
+        // proxy for stripe checkout
+        '/stripe-checkout-proxy': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+          rewrite: path => path.replace(/^\/stripe-checkout-proxy/, '/create-checkout-session')
         }
       }
     }

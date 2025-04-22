@@ -16,9 +16,10 @@ const Navbar = () => {
         🧠 AI Blog
       </Link>
 
-      <div className="space-x-4">
+      <div className="space-x-4 flex items-center">
         <Link to="/generate" className="hover:text-pink-400">Generate</Link>
         <Link to="/history" className="hover:text-pink-400">History</Link>
+        <Link to="/pricing" className="hover:text-pink-400 font-medium">Pricing</Link>
 
         {user ? (
           <span className="ml-4 text-sm text-zinc-400">{user.email}</span>

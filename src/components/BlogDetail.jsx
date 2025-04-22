@@ -57,13 +57,8 @@ const BlogDetail = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-16 text-white">
-      {blog && (
+      {blog ? (
         <>
-          {/* <Helmet>
-            <title>{blog.title} | AI Blog Generator</title>
-            <meta name="description" content={blog.description || blog.content.slice(0, 150)} />
-          </Helmet> */}
-
           <h1 className="text-3xl font-bold mb-4">{blog.title}</h1>
           <button
             onClick={downloadAsPDF}
@@ -75,6 +70,8 @@ const BlogDetail = () => {
             <p className="whitespace-pre-line">{blog.content}</p>
           </div>
         </>
+      ) : (
+        <div className="text-center">Blog not found.</div>
       )}
     </div>
   )
