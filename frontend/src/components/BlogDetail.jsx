@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { db } from '../firebase'
+import { db, auth } from '../firebase'
 import { doc, getDoc } from 'firebase/firestore'
-import { auth } from '../firebase'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import { useUser } from '../context/UserContext'
 
 const BlogDetail = () => {
   const { id } = useParams()
   const [blog, setBlog] = useState(null)
   const [loading, setLoading] = useState(true)
+  const { user, plan } = useUser()
 
   useEffect(() => {
     const fetchBlog = async () => {
-      const user = auth.currentUser
       if (!user) {
         alert('Please log in to view the blog.')
         return
@@ -36,11 +36,15 @@ const BlogDetail = () => {
     }
 
     fetchBlog()
-  }, [id])
+  }, [id, user])
 
   const downloadAsPDF = () => {
-    const input = document.getElementById('blog-content')
+    if (plan !== 'premium') {
+      alert('🚫 PDF downloads are available only for premium users.')
+      return
+    }
 
+    const input = document.getElementById('blog-content')
     html2canvas(input).then((canvas) => {
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
@@ -62,7 +66,11 @@ const BlogDetail = () => {
           <h1 className="text-3xl font-bold mb-4">{blog.title}</h1>
           <button
             onClick={downloadAsPDF}
-            className="mb-6 px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 transition"
+            className={`mb-6 px-4 py-2 rounded-md transition ${
+              plan === 'premium'
+                ? 'bg-indigo-600 hover:bg-indigo-700'
+                : 'bg-zinc-600 opacity-60 cursor-not-allowed'
+            }`}
           >
             📄 Download as PDF
           </button>

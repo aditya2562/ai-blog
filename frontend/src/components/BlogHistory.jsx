@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react'
 import { auth, db } from '../firebase'
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
+import {
+  collection,
+  getDocs,
+  deleteDoc,
+  doc
+} from 'firebase/firestore'
 import { useNavigate } from 'react-router-dom'
 import { motion as Motion, AnimatePresence } from 'framer-motion'
 
 const BlogHistory = () => {
   const [blogs, setBlogs] = useState([])
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -16,9 +22,15 @@ const BlogHistory = () => {
         return navigate('/login')
       }
 
-      const snapshot = await getDocs(collection(db, 'users', user.uid, 'blogs'))
-      const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      setBlogs(fetched)
+      try {
+        const snapshot = await getDocs(collection(db, 'users', user.uid, 'blogs'))
+        const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        setBlogs(fetched)
+      } catch (error) {
+        console.error('Error fetching blog history:', error)
+      } finally {
+        setLoading(false)
+      }
     }
 
     fetchBlogs()
@@ -28,29 +40,38 @@ const BlogHistory = () => {
     const user = auth.currentUser
     if (!user) return
 
-    await deleteDoc(doc(db, 'users', user.uid, 'blogs', id))
-    setBlogs(blogs.filter(blog => blog.id !== id))
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'blogs', id))
+      setBlogs(blogs.filter(blog => blog.id !== id))
+    } catch (err) {
+      console.error('Error deleting blog:', err)
+    }
   }
 
   const clearAllBlogs = async () => {
-    const confirmed = window.confirm('Are you sure you want to clear all blog history?')
-    if (!confirmed) return
+    const confirmClear = window.confirm('Are you sure you want to delete all blog history?')
+    if (!confirmClear) return
 
     const user = auth.currentUser
     if (!user) return
 
-    const snapshot = await getDocs(collection(db, 'users', user.uid, 'blogs'))
-    const batchDeletes = snapshot.docs.map(d => deleteDoc(d.ref))
-
-    await Promise.all(batchDeletes)
-    setBlogs([])
+    try {
+      const snapshot = await getDocs(collection(db, 'users', user.uid, 'blogs'))
+      const deletions = snapshot.docs.map((doc) => deleteDoc(doc.ref))
+      await Promise.all(deletions)
+      setBlogs([])
+    } catch (err) {
+      console.error('Error clearing all blogs:', err)
+    }
   }
 
   return (
     <section className="p-6 max-w-5xl mx-auto text-white">
-      <h2 className="text-3xl font-bold mb-6 text-center">🕘 Your Blog History</h2>
+      <h2 className="text-3xl font-bold mb-8 text-center">📚 Your Blog History</h2>
 
-      {blogs.length === 0 ? (
+      {loading ? (
+        <p className="text-center text-gray-400">Loading...</p>
+      ) : blogs.length === 0 ? (
         <p className="text-center text-gray-400">No blogs found. Start generating!</p>
       ) : (
         <>
@@ -78,12 +99,12 @@ const BlogHistory = () => {
                   <p className="text-sm text-gray-400 mb-3">{blog.description}</p>
 
                   <div className="flex justify-between items-center">
-                    <a
-                      href={`/blog/${blog.id}`}
+                    <button
+                      onClick={() => navigate(`/blog/${blog.id}`)}
                       className="text-blue-400 hover:underline text-sm"
                     >
                       Read More →
-                    </a>
+                    </button>
                     <button
                       onClick={() => deleteBlog(blog.id)}
                       className="text-red-400 hover:text-red-600 text-sm"

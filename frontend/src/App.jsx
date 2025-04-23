@@ -12,6 +12,8 @@ import Pricing from './pages/Pricing'
 import { UserProvider } from './context/UserContext'
 import Success from './pages/Success'
 import Cancel from './pages/Cancel'
+import AccountPage from './pages/AccountPage'
+import PremiumDashboard from './pages/PremiumDashboard'
 
 function App() {
   return (
@@ -30,6 +32,8 @@ function App() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/success" element={<Success />} />  
           <Route path="/cancel" element={<Cancel />} /> 
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/dashboard" element={<PremiumDashboard />} />
           <Route path="*" element={<h2 className="text-center py-10">404 - Page Not Found</h2>} />
         </Routes>
       </div>
