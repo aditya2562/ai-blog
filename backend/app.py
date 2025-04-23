@@ -9,6 +9,7 @@ from sendgrid.helpers.mail import Mail
 import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
+import traceback
 
 # Load env variables
 load_dotenv()
@@ -174,12 +175,14 @@ def create_portal_session():
         if not email:
             return jsonify({"error": "Missing user email"}), 400
 
-        customers = stripe.Customer.list(email=email).data
+        # 🔍 Get customer list by email
+        customers = stripe.Customer.list(email=email, limit=1).data
         if not customers:
             return jsonify({"error": "No Stripe customer found for this email"}), 404
 
         customer_id = customers[0].id
 
+        # ✅ Create billing portal session
         session = stripe.billing_portal.Session.create(
             customer=customer_id,
             return_url="https://adityas-ai-blog.netlify.app/dashboard"
@@ -190,6 +193,9 @@ def create_portal_session():
     except Exception as e:
         print("❌ Stripe Billing Portal Error:", str(e))
         return jsonify({"error": str(e)}), 500
+
+        traceback.print_exc()
+
 # ✅ Run
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
