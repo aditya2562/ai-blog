@@ -5,20 +5,27 @@ import { doc, getDoc } from 'firebase/firestore'
 const AccountPage = () => {
   const [user, setUser] = useState(null)
   const [plan, setPlan] = useState('free')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
-      setUser(u)
       if (u) {
+        setUser(u)
         const userDoc = await getDoc(doc(db, 'users', u.email))
         const userData = userDoc.data()
         setPlan(userData?.plan || 'free')
       }
+      setLoading(false)
     })
     return () => unsubscribe()
   }, [])
 
   const manageSubscription = async () => {
+    if (!user) {
+      alert("User not loaded yet.")
+      return
+    }
+
     try {
       const res = await fetch('https://ai-blog-backend-27mp.onrender.com/create-portal-session', {
         method: 'POST',
@@ -27,16 +34,18 @@ const AccountPage = () => {
       })
 
       const data = await res.json()
-      if (data.url) {
+      if (data?.url) {
         window.location.href = data.url
       } else {
-        alert('Something went wrong.')
+        alert('Error accessing Stripe portal.')
       }
     } catch (err) {
-      console.error(err)
-      alert('Error accessing Stripe portal.')
+      console.error('❌ Stripe portal error:', err)
+      alert('Something went wrong. Try again later.')
     }
   }
+
+  if (loading) return <div className="text-white text-center py-20">Loading...</div>
 
   return (
     <div className="min-h-screen bg-black text-white px-6 py-20">
@@ -50,7 +59,7 @@ const AccountPage = () => {
             onClick={manageSubscription}
             className="px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-md"
           >
-            Manage Subscription
+            💳 Manage Subscription
           </button>
         )}
       </div>

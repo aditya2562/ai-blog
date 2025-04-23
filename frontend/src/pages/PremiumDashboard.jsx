@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 const PremiumDashboard = () => {
   const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -12,12 +13,18 @@ const PremiumDashboard = () => {
         navigate('/login')
       } else {
         setUser(u)
+        setLoading(false)
       }
     })
     return () => unsubscribe()
   }, [navigate])
 
   const handleManageSubscription = async () => {
+    if (!user) {
+      alert("User not loaded yet. Please wait.")
+      return
+    }
+
     try {
       const res = await fetch('https://ai-blog-backend-27mp.onrender.com/create-portal-session', {
         method: 'POST',
@@ -34,9 +41,11 @@ const PremiumDashboard = () => {
       }
     } catch (err) {
       console.error('Portal session error:', err)
-      alert('Something went wrong.')
+      alert('Something went wrong. Please try again.')
     }
   }
+
+  if (loading) return <div className="text-center py-20 text-white">Loading...</div>
 
   return (
     <div className="min-h-screen bg-zinc-900 text-white px-6 py-20">
