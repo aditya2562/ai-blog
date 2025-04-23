@@ -17,11 +17,33 @@ const PremiumDashboard = () => {
     return () => unsubscribe()
   }, [navigate])
 
+  const handleManageSubscription = async () => {
+    try {
+      const res = await fetch('https://ai-blog-backend-27mp.onrender.com/create-portal-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email })
+      })
+
+      const data = await res.json()
+
+      if (data?.url) {
+        window.location.href = data.url
+      } else {
+        alert('Error accessing Stripe portal.')
+      }
+    } catch (err) {
+      console.error('Portal session error:', err)
+      alert('Something went wrong.')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-900 text-white px-6 py-20">
       <div className="max-w-3xl mx-auto text-center">
         <h1 className="text-4xl font-bold mb-6">Welcome Back 👋</h1>
         <p className="text-zinc-400 mb-4">You're now on the Premium Plan, {user?.email}</p>
+
         <div className="space-y-4 mt-8">
           <button
             onClick={() => navigate('/generate')}
@@ -40,6 +62,12 @@ const PremiumDashboard = () => {
             className="block w-full py-3 bg-zinc-700 hover:bg-zinc-800 rounded-md"
           >
             👤 My Account
+          </button>
+          <button
+            onClick={handleManageSubscription}
+            className="block w-full py-3 bg-yellow-600 hover:bg-yellow-700 rounded-md"
+          >
+            💳 Manage Subscription
           </button>
         </div>
       </div>
