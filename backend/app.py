@@ -10,7 +10,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
 
-# Load environment variables
+# Load env variables
 load_dotenv()
 
 app = Flask(__name__)
@@ -20,30 +20,26 @@ CORS(app, origins=[
     "http://127.0.0.1:5173"
 ], supports_credentials=True)
 
-# 🔐 API Keys & Config
+# 🔐 Keys
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@example.com")
+FROM_EMAIL = os.getenv("FROM_EMAIL")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
-# 🧠 Initialize APIs
+# 🧠 Init services
 co = cohere.Client(COHERE_API_KEY)
 stripe.api_key = STRIPE_SECRET_KEY
 
-# 🔥 Initialize Firebase
+# 🔥 Firebase init
 FIREBASE_CRED_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 if not firebase_admin._apps:
     cred = credentials.Certificate(FIREBASE_CRED_PATH)
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# ✅ Validate environment
-if not all([COHERE_API_KEY, SENDGRID_API_KEY, STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_WEBHOOK_SECRET]):
-    raise ValueError("❌ Missing environment variables. Check your .env file.")
-
-# 🔹 Generate Blog
+# ✅ Generate Blog
 @app.route("/generate", methods=["POST", "OPTIONS"])
 def generate_blog():
     if request.method == "OPTIONS":
@@ -72,8 +68,6 @@ def generate_blog():
         full_prompt = f"Write a {tone} blog post about: {prompt}"
         response = co.chat(message=full_prompt, model="command", temperature=0.8)
         blog_text = response.text.strip()
-        title = f"Blog on {prompt.title()}"
-        description = blog_text[:120] + "..."
 
         updates = {
             "lastGenerationDate": today,
@@ -83,23 +77,21 @@ def generate_blog():
 
         return jsonify({
             "blog": blog_text,
-            "title": title,
-            "description": description
+            "title": f"Blog on {prompt.title()}",
+            "description": blog_text[:120] + "..."
         }), 200
     except Exception as e:
         print("🔥 Blog Generation Error:", str(e))
         return jsonify({"error": str(e)}), 500
 
-# 🔹 Send Blog via Email
+# ✅ Send Email
 @app.route("/send_email", methods=["POST", "OPTIONS"])
 def send_email():
     if request.method == "OPTIONS":
         return "", 204
     try:
         data = request.get_json()
-        email = data.get("email")
-        title = data.get("title")
-        content = data.get("content")
+        email, title, content = data.get("email"), data.get("title"), data.get("content")
 
         if not all([email, title, content]):
             return jsonify({"error": "Missing email, title, or content"}), 400
@@ -118,16 +110,12 @@ def send_email():
         print("🔥 SendGrid Error:", str(e))
         return jsonify({"error": str(e)}), 500
 
-# 🔹 Stripe Checkout
-@app.route("/create-checkout-session", methods=["POST", "OPTIONS"])
+# ✅ Create Stripe Checkout Session
+@app.route("/create-checkout-session", methods=["POST"])
 def create_checkout_session():
-    if request.method == "OPTIONS":
-        return "", 204
     try:
         data = request.get_json()
         email = data.get("email", "anonymous@guest.com")
-
-        print("📧 Creating session for:", email)
 
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
@@ -143,21 +131,18 @@ def create_checkout_session():
         )
 
         return jsonify({"url": session.url}), 200
-
     except Exception as e:
         print("🔥 Stripe Checkout Error:", str(e))
         return jsonify({"error": str(e)}), 500
 
-# 🧩 Stripe Webhook to Upgrade User Plan
+# ✅ Stripe Webhook
 @app.route("/webhook", methods=["POST"])
 def stripe_webhook():
     payload = request.data
     sig_header = request.headers.get("Stripe-Signature")
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, STRIPE_WEBHOOK_SECRET
-        )
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     except stripe.error.SignatureVerificationError as e:
         print("❌ Webhook signature verification failed:", str(e))
         return jsonify(success=False), 400
@@ -166,15 +151,45 @@ def stripe_webhook():
         session = event["data"]["object"]
         email = session.get("customer_email")
 
-    if email:
-        db.collection("users").document(email).set({
-            "plan": "premium",
-            "subscribed": True,
-            "stripe_session_id": session["id"]
-        }, merge=True)
+        if email:
+            db.collection("users").document(email).set({
+                "plan": "premium",
+                "subscribed": True,
+                "stripe_session_id": session["id"]
+            }, merge=True)
+
+            print(f"✅ Upgraded {email} to premium")
 
     return jsonify(success=True), 200
 
-# ✅ Run Flask App
+# ✅ Stripe Billing Portal
+@app.route("/create-portal-session", methods=["POST", "OPTIONS"])
+def create_portal_session():
+    if request.method == "OPTIONS":
+        return "", 204
+    try:
+        data = request.get_json()
+        email = data.get("email")
+
+        if not email:
+            return jsonify({"error": "Missing user email"}), 400
+
+        customers = stripe.Customer.list(email=email).data
+        if not customers:
+            return jsonify({"error": "No Stripe customer found for this email"}), 404
+
+        customer_id = customers[0].id
+
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url="https://adityas-ai-blog.netlify.app/dashboard"
+        )
+
+        return jsonify({"url": session.url}), 200
+
+    except Exception as e:
+        print("❌ Stripe Billing Portal Error:", str(e))
+        return jsonify({"error": str(e)}), 500
+# ✅ Run
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
