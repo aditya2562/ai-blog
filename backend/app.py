@@ -40,6 +40,11 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
+# Add route for debugging
+@app.route("/test", methods=["GET"])
+def test_endpoint():
+    return jsonify({"status": "working"}), 200
+
 # ✅ Generate Blog
 @app.route("/generate", methods=["POST", "OPTIONS"])
 def generate_blog():
@@ -164,28 +169,36 @@ def stripe_webhook():
 
     return jsonify(success=True), 200
 
-# ✅ Stripe Billing Portal
+# ✅ Stripe Billing Portal - Fix with both endpoint variants
 @app.route("/create-portal-session", methods=["POST", "OPTIONS"])
+@app.route("/create-portal-session/", methods=["POST", "OPTIONS"])
 def create_portal_session():
     if request.method == "OPTIONS":
         return "", 204
 
     try:
+        print("📧 Received portal session request")
         data = request.get_json()
+        if not data:
+            print("❌ No JSON data received")
+            return jsonify({"error": "No JSON data received"}), 400
+            
         email = data.get("email")
-        print(f"📧 Received request to create portal session for: {email}")
+        print(f"📧 Email from request: {email}")
 
         if not email:
+            print("❌ Missing user email")
             return jsonify({"error": "Missing user email"}), 400
 
         user_doc = db.collection("users").document(email).get()
         if not user_doc.exists:
-            print("❌ Firestore user document not found")
+            print(f"❌ Firestore user document not found for {email}")
             return jsonify({"error": "User not found"}), 404
 
-        stripe_customer_id = user_doc.to_dict().get("stripe_customer_id")
+        user_data = user_doc.to_dict()
+        stripe_customer_id = user_data.get("stripe_customer_id")
         if not stripe_customer_id:
-            print("❌ stripe_customer_id not found in Firestore")
+            print(f"❌ stripe_customer_id not found in Firestore for {email}")
             return jsonify({"error": "No Stripe customer ID found"}), 404
 
         print(f"✅ Found Stripe customer ID: {stripe_customer_id}")
@@ -195,7 +208,8 @@ def create_portal_session():
             return_url="https://adityas-ai-blog.netlify.app/dashboard"
         )
 
-        print("✅ Billing portal session created successfully.")
+        print("✅ Billing portal session created successfully")
+        print(f"✅ Portal URL: {session.url}")
         return jsonify({"url": session.url}), 200
 
     except Exception as e:
@@ -205,4 +219,4 @@ def create_portal_session():
 
 # ✅ Run
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
