@@ -224,6 +224,40 @@ def stripe_webhook():
 
     return jsonify(success=True), 200
 
+@app.route("/create-portal-session", methods=["POST", "OPTIONS"])
+def create_portal_session():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        print(f"📧 Request to create portal for: {email}")
+
+        if not email:
+            return jsonify({"error": "Missing user email"}), 400
+
+        # Fetch Firestore user doc
+        user_doc = db.collection("users").document(email).get()
+        if not user_doc.exists:
+            return jsonify({"error": "User not found"}), 404
+
+        stripe_customer_id = user_doc.to_dict().get("stripe_customer_id")
+        if not stripe_customer_id:
+            return jsonify({"error": "No Stripe customer ID found"}), 404
+
+        # Create Stripe Billing Portal session
+        session = stripe.billing_portal.Session.create(
+            customer=stripe_customer_id,
+            return_url="https://adityas-ai-blog.netlify.app/dashboard"
+        )
+
+        return jsonify({"url": session.url}), 200
+
+    except Exception as e:
+        print("❌ Error creating portal:", str(e))
+        return jsonify({"error": str(e)}), 500
+    
 # ✅ Run
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
