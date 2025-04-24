@@ -212,82 +212,17 @@ def stripe_webhook():
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         email = session.get("customer_email")
-        customer_id = session.get("customer")
+        customer_id = session.get("customer")  # <- important
 
         if email and customer_id:
-            print(f"✅ Upgrading user {email} with Stripe customer {customer_id}")
             db.collection("users").document(email).set({
                 "plan": "premium",
                 "subscribed": True,
                 "stripe_session_id": session["id"],
-                "stripe_customer_id": customer_id
+                "stripe_customer_id": customer_id  # <- save this!
             }, merge=True)
 
     return jsonify(success=True), 200
-
-# ✅ Stripe Billing Portal - Fixed implementation with proper error handling
-@app.route("/create-portal-session", methods=["POST", "OPTIONS"])
-def create_portal_session():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    log_request_info("🔗 Portal Session:")
-    
-    try:
-        # Check if we have JSON data
-        if not request.is_json:
-            print("❌ Request is not JSON")
-            return jsonify({"error": "Request must be JSON"}), 400
-            
-        data = request.get_json()
-        if not data:
-            print("❌ No JSON data received")
-            return jsonify({"error": "No JSON data received"}), 400
-            
-        email = data.get("email")
-        print(f"📧 Email from request: {email}")
-
-        if not email:
-            print("❌ Missing user email")
-            return jsonify({"error": "Missing user email"}), 400
-
-        # Get user doc from Firestore
-        user_doc = db.collection("users").document(email).get()
-        if not user_doc.exists:
-            print(f"❌ Firestore user document not found for {email}")
-            return jsonify({"error": "User not found"}), 404
-
-        user_data = user_doc.to_dict()
-        stripe_customer_id = user_data.get("stripe_customer_id")
-        if not stripe_customer_id:
-            print(f"❌ stripe_customer_id not found in Firestore for {email}")
-            return jsonify({"error": "No Stripe customer ID found"}), 404
-
-        print(f"✅ Found Stripe customer ID: {stripe_customer_id}")
-
-        # Dynamically set return URL based on request origin
-        origin = request.headers.get('Origin')
-        if not origin:
-            # Default to the most common domain if Origin header not found
-            origin = "https://adityakacha324-ai-blog.netlify.app"
-        
-        return_url = f"{origin}/dashboard"
-        print(f"🔗 Using return URL: {return_url}")
-
-        # Create the billing portal session
-        session = stripe.billing_portal.Session.create(
-            customer=stripe_customer_id,
-            return_url=return_url
-        )
-
-        print("✅ Billing portal session created successfully")
-        print(f"✅ Portal URL: {session.url}")
-        return jsonify({"url": session.url}), 200
-
-    except Exception as e:
-        print("❌ Exception in create_portal_session:", str(e))
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
 
 # ✅ Run
 if __name__ == "__main__":
