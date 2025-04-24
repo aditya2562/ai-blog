@@ -26,22 +26,20 @@ const PremiumDashboard = () => {
     }
 
     try {
-      const res = await fetch('https://ai-blog-backend-27mp.onrender.com/create-portal-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("https://ai-blog-backend-27mp.onrender.com/create-portal-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: user.email })
       })
-
       const data = await res.json()
-
-      if (data?.url) {
+      if (data.url) {
         window.location.href = data.url
       } else {
-        alert('Error accessing Stripe portal.')
+        alert("Something went wrong.")
       }
     } catch (err) {
-      console.error('Portal session error:', err)
-      alert('Something went wrong. Please try again.')
+      console.error("❌ Portal Error:", err)
+      alert("Error accessing Stripe portal.")
     }
   }
 
@@ -52,19 +50,19 @@ const PremiumDashboard = () => {
       <div className="max-w-3xl mx-auto text-center">
         <h1 className="text-4xl font-bold mb-6">Welcome Back 👋</h1>
         <p className="text-zinc-400 mb-4">You're now on the Premium Plan, {user?.email}</p>
-
+        
         <div className="space-y-4 mt-8">
           <button
             onClick={() => navigate('/generate')}
             className="block w-full py-3 bg-pink-600 hover:bg-pink-700 rounded-md"
           >
-            ✍️ Generate a New Blog
+            ✨ Generate a New Blog
           </button>
           <button
             onClick={() => navigate('/history')}
             className="block w-full py-3 bg-indigo-600 hover:bg-indigo-700 rounded-md"
           >
-            📚 View Blog History
+            📝 View Blog History
           </button>
           <button
             onClick={() => navigate('/account')}

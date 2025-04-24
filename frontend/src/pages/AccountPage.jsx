@@ -27,21 +27,20 @@ const AccountPage = () => {
     }
 
     try {
-      const res = await fetch('https://ai-blog-backend-27mp.onrender.com/create-portal-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("https://ai-blog-backend-27mp.onrender.com/create-portal-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: user.email })
       })
-
       const data = await res.json()
-      if (data?.url) {
+      if (data.url) {
         window.location.href = data.url
       } else {
-        alert('Error accessing Stripe portal.')
+        alert("Something went wrong.")
       }
     } catch (err) {
-      console.error('❌ Stripe portal error:', err)
-      alert('Something went wrong. Try again later.')
+      console.error("❌ Portal Error:", err)
+      alert("Error accessing Stripe portal.")
     }
   }
 
@@ -49,11 +48,11 @@ const AccountPage = () => {
 
   return (
     <div className="min-h-screen bg-black text-white px-6 py-20">
-      <div className="max-w-2xl mx-auto text-center">
+      <div className="max-w-3xl mx-auto text-center">
         <h1 className="text-3xl font-bold mb-4">My Account</h1>
         <p className="mb-2">👤 Email: {user?.email}</p>
         <p className="mb-4">⭐ Plan: {plan}</p>
-
+        
         {plan === 'premium' && (
           <button
             onClick={manageSubscription}
