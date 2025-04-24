@@ -227,7 +227,6 @@ def stripe_webhook():
 
 # ✅ Stripe Billing Portal - Fixed implementation with proper error handling
 @app.route("/create-portal-session", methods=["POST", "OPTIONS"])
-@app.route("/create-portal-session/", methods=["POST", "OPTIONS"])
 def create_portal_session():
     if request.method == "OPTIONS":
         return "", 204
