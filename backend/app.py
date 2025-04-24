@@ -15,8 +15,12 @@ import traceback
 load_dotenv()
 
 app = Flask(__name__)
+# Updated CORS configuration to allow all possible domain variations
 CORS(app, origins=[
     "https://adityas-ai-blog.netlify.app",
+    "https://adityakacha324-ai-blog.netlify.app",
+    "https://adityakacha324-ai-blog.netlify.app",
+    "https://ai-blog.netlify.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173"
 ], supports_credentials=True)
@@ -45,13 +49,28 @@ db = firestore.client()
 def test_endpoint():
     return jsonify({"status": "working"}), 200
 
+# Helper function to log request info
+def log_request_info(prefix=""):
+    print(f"{prefix} Request method: {request.method}")
+    print(f"{prefix} Request path: {request.path}")
+    print(f"{prefix} Request headers: {dict(request.headers)}")
+    print(f"{prefix} Request origin: {request.headers.get('Origin', 'No origin')}")
+    print(f"{prefix} Request content type: {request.content_type}")
+    print(f"{prefix} Request remote addr: {request.remote_addr}")
+
 # ✅ Generate Blog
 @app.route("/generate", methods=["POST", "OPTIONS"])
 def generate_blog():
     if request.method == "OPTIONS":
         return "", 204
+    
+    log_request_info("📝 Blog Generate:")
+    
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data received"}), 400
+            
         prompt = data.get("prompt", "").strip()
         tone = data.get("tone", "neutral").strip().lower()
         user_email = data.get("user_email")
@@ -88,6 +107,7 @@ def generate_blog():
         }), 200
     except Exception as e:
         print("🔥 Blog Generation Error:", str(e))
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 # ✅ Send Email
@@ -95,8 +115,14 @@ def generate_blog():
 def send_email():
     if request.method == "OPTIONS":
         return "", 204
+    
+    log_request_info("📧 Send Email:")
+    
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data received"}), 400
+            
         email, title, content = data.get("email"), data.get("title"), data.get("content")
 
         if not all([email, title, content]):
@@ -114,14 +140,35 @@ def send_email():
         return jsonify({"message": "Email sent successfully!"}), 200
     except Exception as e:
         print("🔥 SendGrid Error:", str(e))
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 # ✅ Create Stripe Checkout Session
-@app.route("/create-checkout-session", methods=["POST"])
+@app.route("/create-checkout-session", methods=["POST", "OPTIONS"])
 def create_checkout_session():
+    if request.method == "OPTIONS":
+        return "", 204
+        
+    log_request_info("💲 Checkout Session:")
+    
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data received"}), 400
+            
         email = data.get("email", "anonymous@guest.com")
+
+        # Dynamically set success and cancel URLs based on request origin
+        origin = request.headers.get('Origin')
+        if not origin:
+            # Default to the most common domain if Origin header not found
+            origin = "https://adityakacha324-ai-blog.netlify.app"
+        
+        success_url = f"{origin}/success"
+        cancel_url = f"{origin}/cancel"
+        
+        print(f"🔗 Using success URL: {success_url}")
+        print(f"🔗 Using cancel URL: {cancel_url}")
 
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
@@ -130,8 +177,8 @@ def create_checkout_session():
                 "quantity": 1,
             }],
             mode="subscription",
-            success_url="https://adityas-ai-blog.netlify.app/success",
-            cancel_url="https://adityas-ai-blog.netlify.app/cancel",
+            success_url=success_url,
+            cancel_url=cancel_url,
             customer_email=email,
             metadata={"user_email": email}
         )
@@ -139,11 +186,14 @@ def create_checkout_session():
         return jsonify({"url": session.url}), 200
     except Exception as e:
         print("🔥 Stripe Checkout Error:", str(e))
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 # ✅ Stripe Webhook
 @app.route("/webhook", methods=["POST"])
 def stripe_webhook():
+    log_request_info("📣 Webhook:")
+    
     payload = request.data
     sig_header = request.headers.get("Stripe-Signature")
 
@@ -152,6 +202,12 @@ def stripe_webhook():
     except stripe.error.SignatureVerificationError as e:
         print("❌ Webhook signature verification failed:", str(e))
         return jsonify(success=False), 400
+    except Exception as e:
+        print("❌ Webhook general error:", str(e))
+        traceback.print_exc()
+        return jsonify(success=False), 400
+
+    print(f"✅ Webhook event type: {event['type']}")
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
@@ -169,15 +225,21 @@ def stripe_webhook():
 
     return jsonify(success=True), 200
 
-# ✅ Stripe Billing Portal - Fix with both endpoint variants
+# ✅ Stripe Billing Portal - Fixed implementation with proper error handling
 @app.route("/create-portal-session", methods=["POST", "OPTIONS"])
 @app.route("/create-portal-session/", methods=["POST", "OPTIONS"])
 def create_portal_session():
     if request.method == "OPTIONS":
         return "", 204
 
+    log_request_info("🔗 Portal Session:")
+    
     try:
-        print("📧 Received portal session request")
+        # Check if we have JSON data
+        if not request.is_json:
+            print("❌ Request is not JSON")
+            return jsonify({"error": "Request must be JSON"}), 400
+            
         data = request.get_json()
         if not data:
             print("❌ No JSON data received")
@@ -190,6 +252,7 @@ def create_portal_session():
             print("❌ Missing user email")
             return jsonify({"error": "Missing user email"}), 400
 
+        # Get user doc from Firestore
         user_doc = db.collection("users").document(email).get()
         if not user_doc.exists:
             print(f"❌ Firestore user document not found for {email}")
@@ -203,9 +266,19 @@ def create_portal_session():
 
         print(f"✅ Found Stripe customer ID: {stripe_customer_id}")
 
+        # Dynamically set return URL based on request origin
+        origin = request.headers.get('Origin')
+        if not origin:
+            # Default to the most common domain if Origin header not found
+            origin = "https://adityakacha324-ai-blog.netlify.app"
+        
+        return_url = f"{origin}/dashboard"
+        print(f"🔗 Using return URL: {return_url}")
+
+        # Create the billing portal session
         session = stripe.billing_portal.Session.create(
             customer=stripe_customer_id,
-            return_url="https://adityas-ai-blog.netlify.app/dashboard"
+            return_url=return_url
         )
 
         print("✅ Billing portal session created successfully")
@@ -219,4 +292,5 @@ def create_portal_session():
 
 # ✅ Run
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
