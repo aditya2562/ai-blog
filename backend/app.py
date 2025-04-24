@@ -151,7 +151,7 @@ def stripe_webhook():
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         email = session.get("customer_email")
-        customer_id = session.get("customer")  # 👈 Get customer ID
+        customer_id = session.get("customer")
 
         if email and customer_id:
             print(f"✅ Upgrading user {email} with Stripe customer {customer_id}")
@@ -159,11 +159,11 @@ def stripe_webhook():
                 "plan": "premium",
                 "subscribed": True,
                 "stripe_session_id": session["id"],
-                "stripe_customer_id": customer_id  # 👈 Store it
+                "stripe_customer_id": customer_id
             }, merge=True)
 
     return jsonify(success=True), 200
-    
+
 # ✅ Stripe Billing Portal
 @app.route("/create-portal-session", methods=["POST", "OPTIONS"])
 def create_portal_session():
@@ -178,7 +178,6 @@ def create_portal_session():
         if not email:
             return jsonify({"error": "Missing user email"}), 400
 
-        # 🔍 Get Stripe customer using Firestore stored customer ID
         user_doc = db.collection("users").document(email).get()
         if not user_doc.exists:
             print("❌ Firestore user document not found")
@@ -201,7 +200,6 @@ def create_portal_session():
 
     except Exception as e:
         print("❌ Exception in create_portal_session:", str(e))
-        import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
