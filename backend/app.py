@@ -17,10 +17,7 @@ load_dotenv()
 app = Flask(__name__)
 # Updated CORS configuration to allow all possible domain variations
 CORS(app, origins=[
-    "https://adityas-ai-blog.netlify.app",
-    "https://adityakacha324-ai-blog.netlify.app",
-    "https://adityakacha324-ai-blog.netlify.app",
-    "https://ai-blog.netlify.app",
+    "https://prose-ai.netlify.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173"
 ], supports_credentials=True)
@@ -162,7 +159,7 @@ def create_checkout_session():
         origin = request.headers.get('Origin')
         if not origin:
             # Default to the most common domain if Origin header not found
-            origin = "https://adityakacha324-ai-blog.netlify.app"
+            origin = "https://prose-ai.netlify.app"
         
         success_url = f"{origin}/success"
         cancel_url = f"{origin}/cancel"
@@ -249,7 +246,7 @@ def create_portal_session():
         # Create Stripe Billing Portal session
         session = stripe.billing_portal.Session.create(
             customer=stripe_customer_id,
-            return_url="https://adityas-ai-blog.netlify.app/dashboard"
+            return_url="https://prose-ai.netlify.app/dashboard"
         )
 
         return jsonify({"url": session.url}), 200
