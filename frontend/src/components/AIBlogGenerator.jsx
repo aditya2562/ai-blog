@@ -51,7 +51,7 @@ const AIBlogGenerator = () => {
     }
 
     if (plan === 'free' && !canGenerate) {
-      alert('Free users can only generate 1 blog per day. Upgrade to premium for unlimited access.')
+      alert('Free users can only generate 3 blog per day. Upgrade to premium for unlimited access.')
       return
     }
 
