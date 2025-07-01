@@ -24,7 +24,6 @@ const AIBlogGenerator = () => {
   const { user, plan, loading: userLoading } = useUser()
   const [canGenerate, setCanGenerate] = useState(true)
 
-  // Check if user (free plan) has already generated a blog today
   useEffect(() => {
     const checkBlogLimit = async () => {
       if (!user || plan !== 'free') return
@@ -36,7 +35,9 @@ const AIBlogGenerator = () => {
       )
 
       const snapshot = await getDocs(q)
-      if (!snapshot.empty) setCanGenerate(false)
+      if (snapshot.size >= 3) {
+        setCanGenerate(false)
+      }
     }
 
     checkBlogLimit()
@@ -51,7 +52,7 @@ const AIBlogGenerator = () => {
     }
 
     if (plan === 'free' && !canGenerate) {
-      alert('Free users can only generate 3 blog per day. Upgrade to premium for unlimited access.')
+      alert('Free users can only generate 3 blogs per day. Upgrade to premium for unlimited access.')
       return
     }
 
@@ -70,8 +71,13 @@ const AIBlogGenerator = () => {
         body: JSON.stringify({ prompt: topic, user_email: user.email, tone })
       })
 
-      if (!res.ok) throw new Error((await res.json()).error || 'Failed to generate blog')
       const data = await res.json()
+
+      if (!res.ok) {
+        console.error("Error from backend:", data)
+        alert(data.error || "Something went wrong.")
+        return
+      }
 
       const blogTitle = `Blog on ${topic}`
       const blogDescription = data.blog.substring(0, 120) + '...'
@@ -93,7 +99,18 @@ const AIBlogGenerator = () => {
         createdAt: serverTimestamp()
       })
 
-      setCanGenerate(false)
+      // Update generation limit after storing
+      if (plan === 'free') {
+        const todayStart = Timestamp.fromDate(new Date(new Date().setHours(0, 0, 0, 0)))
+        const q = query(
+          collection(db, 'users', user.uid, 'blogs'),
+          where('createdAt', '>=', todayStart)
+        )
+        const snapshot = await getDocs(q)
+        if (snapshot.size >= 3) {
+          setCanGenerate(false)
+        }
+      }
     } catch (err) {
       console.error('❌ Blog generation failed:', err)
       alert('Something went wrong. Please try again.')

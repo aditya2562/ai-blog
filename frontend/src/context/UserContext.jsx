@@ -2,13 +2,9 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { auth, db } from '../firebase'
 import { doc, getDoc } from 'firebase/firestore'
 
-// Create context
 const UserContext = createContext()
-
-// Custom hook to access user data
 export const useUser = () => useContext(UserContext)
 
-// Provider
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [plan, setPlan] = useState('free')
@@ -17,20 +13,29 @@ export const UserProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       setUser(firebaseUser)
+
       if (firebaseUser) {
         try {
-          const docRef = doc(db, 'users', firebaseUser.email)
-          const docSnap = await getDoc(docRef)
-          if (docSnap.exists()) {
-            const data = docSnap.data()
-            setPlan(data.plan || 'free')
-          }
+          const uidRef = doc(db, 'users', firebaseUser.uid)
+          const emailRef = doc(db, 'users', firebaseUser.email)
+
+          const [uidSnap, emailSnap] = await Promise.all([
+            getDoc(uidRef),
+            getDoc(emailRef),
+          ])
+
+          const uidData = uidSnap.exists() ? uidSnap.data() : {}
+          const emailData = emailSnap.exists() ? emailSnap.data() : {}
+
+          const detectedPlan = emailData.plan || uidData.plan || 'free'
+          setPlan(detectedPlan)
         } catch (err) {
-          console.error('Failed to fetch plan from Firestore:', err)
+          console.error('⚠️ Failed to fetch plan:', err)
         }
       } else {
         setPlan('free')
       }
+
       setLoading(false)
     })
 

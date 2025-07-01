@@ -77,7 +77,7 @@ const Pricing = () => {
             <h2 className="text-2xl font-semibold mb-4">Free Plan</h2>
             <p className="text-zinc-400 mb-6">Perfect for getting started with AI blog generation.</p>
             <ul className="text-left space-y-2 text-zinc-300 mb-6">
-              <li>✅ Generate 1 blog per day</li>
+              <li>✅ Generate 3 blog per day</li>
               <li>❌ Email delivery</li>
               <li>❌ PDF downloads</li>
               <li>❌ Premium tones</li>
