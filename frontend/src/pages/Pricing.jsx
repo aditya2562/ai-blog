@@ -5,7 +5,7 @@ import { doc, getDoc } from 'firebase/firestore'
 
 const Pricing = () => {
   const [user, setUser] = useState(null)
-  const [plan, setPlan] = useState('free')
+  const [plan, setPlan] = useState(null)
 
   useEffect(() => {
     document.title = 'Pricing | AI Blog Generator'
@@ -13,9 +13,16 @@ const Pricing = () => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
       setUser(u)
       if (u) {
-        const userDoc = await getDoc(doc(db, 'users', u.email))
-        const userData = userDoc.data()
-        setPlan(userData?.plan || 'free')
+        try {
+          const userDoc = await getDoc(doc(db, 'users', u.email))
+          const userData = userDoc.exists() ? userDoc.data() : {}
+          setPlan(userData?.plan || 'free')
+        } catch (err) {
+          console.error('Error fetching user plan:', err)
+          setPlan('free')
+        }
+      } else {
+        setPlan('free')
       }
     })
 
@@ -38,8 +45,6 @@ const Pricing = () => {
       })
 
       const data = await res.json()
-      console.log("🔁 Stripe checkout response:", data)
-
       if (data?.url) {
         window.location.href = data.url
       } else {
