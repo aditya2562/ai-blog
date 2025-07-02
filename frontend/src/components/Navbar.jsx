@@ -1,23 +1,8 @@
 import { Link } from 'react-router-dom'
-import { auth, db } from '../firebase'
-import { useEffect, useState } from 'react'
-import { doc, getDoc } from 'firebase/firestore'
+import { useUser } from '../context/UserContext'
 
 const Navbar = () => {
-  const [user, setUser] = useState(null)
-  const [plan, setPlan] = useState(null)
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (u) => {
-      setUser(u)
-      if (u) {
-        const userDoc = await getDoc(doc(db, 'users', u.email))
-        const userData = userDoc.data()
-        setPlan(userData?.plan || 'free')
-      }
-    })
-    return () => unsubscribe()
-  }, [])
+  const { user, plan, loading } = useUser()
 
   return (
     <nav className="bg-black text-white py-4 px-6 flex justify-between items-center shadow-md">
@@ -30,11 +15,11 @@ const Navbar = () => {
         <Link to="/history" className="hover:text-pink-400">History</Link>
         <Link to="/pricing" className="hover:text-pink-400 font-medium">Pricing</Link>
 
-        {plan === 'premium' && (
+        {!loading && user && plan === 'premium' && (
           <Link to="/dashboard" className="hover:text-green-400 font-medium">Dashboard</Link>
         )}
 
-        {user ? (
+        {!loading && user ? (
           <span className="ml-4 text-sm text-zinc-400">{user.email}</span>
         ) : (
           <>
