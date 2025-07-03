@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion as Motion } from 'framer-motion'
 import { auth, db } from '../firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, onSnapshot } from 'firebase/firestore'
 
 const Pricing = () => {
   const [user, setUser] = useState(null)
@@ -10,23 +10,32 @@ const Pricing = () => {
   useEffect(() => {
     document.title = 'Pricing | AI Blog Generator'
 
-    const unsubscribe = auth.onAuthStateChanged(async (u) => {
+    // Listen for auth state changes
+    const unsubscribeAuth = auth.onAuthStateChanged((u) => {
       setUser(u)
       if (u) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', u.email))
-          const userData = userDoc.exists() ? userDoc.data() : {}
-          setPlan(userData?.plan || 'free')
-        } catch (err) {
-          console.error('Error fetching user plan:', err)
-          setPlan('free')
-        }
+        // Set up real-time listener for the user's plan
+        const userDocRef = doc(db, 'users', u.email)
+        const unsubscribePlan = onSnapshot(
+          userDocRef,
+          (userDoc) => {
+            const userData = userDoc.exists() ? userDoc.data() : {}
+            setPlan(userData?.plan || 'free')
+          },
+          (err) => {
+            console.error('Error listening to user plan:', err)
+            setPlan('free')
+          }
+        )
+        // Clean up plan listener when component unmounts or user logs out
+        return unsubscribePlan
       } else {
         setPlan('free')
       }
     })
 
-    return () => unsubscribe()
+    // Clean up auth listener on unmount
+    return () => unsubscribeAuth()
   }, [])
 
   const handleUpgrade = async () => {
