@@ -5,37 +5,48 @@ import { doc, onSnapshot } from 'firebase/firestore'
 
 const Pricing = () => {
   const [user, setUser] = useState(null)
-  const [plan, setPlan] = useState(null)
+  const [plan, setPlan] = useState('free')
 
   useEffect(() => {
     document.title = 'Pricing | AI Blog Generator'
 
+    // Track unsubscribe functions for cleanup
+    let unsubscribePlan = null
+
     // Listen for auth state changes
     const unsubscribeAuth = auth.onAuthStateChanged((u) => {
       setUser(u)
+      // Clean up previous plan listener
+      if (unsubscribePlan) {
+        unsubscribePlan()
+        unsubscribePlan = null
+      }
       if (u) {
-        // Set up real-time listener for the user's plan
         const userDocRef = doc(db, 'users', u.email)
-        const unsubscribePlan = onSnapshot(
+        unsubscribePlan = onSnapshot(
           userDocRef,
           (userDoc) => {
             const userData = userDoc.exists() ? userDoc.data() : {}
-            setPlan(userData?.plan || 'free')
+            // Defensive trim and lower-case to avoid case/space bugs
+            const firestorePlan = (userData?.plan || 'free').toString().trim().toLowerCase()
+            setPlan(firestorePlan)
+            console.log('Plan from Firestore:', firestorePlan)
           },
           (err) => {
             console.error('Error listening to user plan:', err)
             setPlan('free')
           }
         )
-        // Clean up plan listener when component unmounts or user logs out
-        return unsubscribePlan
       } else {
         setPlan('free')
       }
     })
 
-    // Clean up auth listener on unmount
-    return () => unsubscribeAuth()
+    // Clean up all listeners on unmount
+    return () => {
+      unsubscribeAuth()
+      if (unsubscribePlan) unsubscribePlan()
+    }
   }, [])
 
   const handleUpgrade = async () => {
@@ -65,6 +76,9 @@ const Pricing = () => {
       alert('Failed to start checkout session.')
     }
   }
+
+  // Debug: See the current plan in the console on every render
+  console.log('Current plan state:', plan)
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-black text-white py-20 px-6">
